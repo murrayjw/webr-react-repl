@@ -1,10 +1,9 @@
-// App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// Import Console dynamically as it is an ES module
 const useWebRConsole = () => {
   const [output, setOutput] = useState(['Loading webR, please wait...']);
   const [webRConsole, setWebRConsole] = useState(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     let consoleInstance;
@@ -14,23 +13,33 @@ const useWebRConsole = () => {
         stdout: line => setOutput(o => [...o, line]),
         stderr: line => setOutput(o => [...o, line]),
         prompt: p => setOutput(o => [...o, p]),
+        canvasImage: image => {
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0);
+          }
+        },
+        canvasNewPage: () => {
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
       });
       consoleInstance.run();
       setWebRConsole(consoleInstance);
     })();
 
-    return () => {
-      if (consoleInstance) {
-        consoleInstance.destroy();
-      }
-    };
+    // Clean up code here if needed (currently no clean up required)
   }, []);
 
-  return { webRConsole, output, setOutput };
+  return { webRConsole, output, setOutput, canvasRef };
 };
 
 function App() {
-  const { webRConsole, output, setOutput } = useWebRConsole();
+  const { webRConsole, output, setOutput, canvasRef } = useWebRConsole();
   const [inputValue, setInputValue] = useState('');
 
   const handleInputChange = (e) => {
@@ -58,6 +67,14 @@ function App() {
           onKeyPress={(e) => e.key === 'Enter' && sendInput()}
         />
         <button onClick={sendInput}>Run</button>
+      </div>
+      <div>
+        <canvas 
+          ref={canvasRef} 
+          width="1008" 
+          height="1008" 
+          style={{ width: '450px', height: '450px', border: '1px solid black' }} 
+        />
       </div>
     </div>
   );
